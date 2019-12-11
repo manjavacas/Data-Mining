@@ -19,3 +19,7 @@ Se puede realizar un buen seguimiento del proceso del trabajo por medio de los n
 
 ## Ejecución
 Para efectuar cualquier tipo de prueba, se aconseja hacerlo con los scripts de [src](src/).
+
+- [Obtención dataset partidas](src/chess_mining_1.py)
+
+- [Obtención tarjeta de datos de una partida](src/chess_mining_2.py)
