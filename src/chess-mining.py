@@ -1,10 +1,11 @@
 
+import os
 import chess.pgn as pgn
 
 from datetime import datetime
 from datetime import timedelta
 
-GAMES_FILE = 'games.pgn'
+GAMES_FILE = os.path.join('..', 'data', 'games.pgn')
 PIECE_WEIGHTS = {
     'P': 1,
     'N': 3,
