@@ -1,11 +1,15 @@
-
 import os
 import chess.pgn as pgn
+import pandas as pd
 
 from datetime import datetime
 from datetime import timedelta
 
-GAMES_FILE = os.path.join('..', 'data', 'games.pgn')
+GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
+TARGET_DATA_FILE = os.path.join('..', 'data', 'target_data.csv')
+
+COLUMNS = ['user_id', 'game_link', 'elo', 'colour', 'opening', 'result', 'movements', 'total_time_player', 'total_time', 'points_balance', 'taken_balance', 'aggressiveness']
+
 PIECE_WEIGHTS = {
     'P': 1,
     'N': 3,
@@ -13,154 +17,6 @@ PIECE_WEIGHTS = {
     'R': 5,
     'Q': 9
 }
-
-# Load games from PGN file
-with open(GAMES_FILE) as f:
-    game = pgn.read_game(f)
-
-row_white = []
-row_black = []
-
-# USER_ID
-row_white.append(game.headers['White'])
-row_black.append(game.headers['Black'])
-
-# GAME_LINK
-row_white.append(game.headers['Site'])
-row_black.append(game.headers['Site'])
-
-# ELO
-row_white.append(game.headers['WhiteElo'])
-row_black.append(game.headers['BlackElo'])
-
-# COLOUR
-row_white.append('White')
-row_black.append('Black')
-
-# OPENING
-row_white.append(game.headers['Opening'])
-row_black.append(game.headers['Opening'])
-
-# RESULT
-
-if "1/2" in game.headers['Result']:
-    result_white = 2
-    result_black = 2
-elif game.headers['Result'][0] == "1":
-    result_white = 1
-    result_black = 0
-else:
-    result_white = 0
-    result_black = 1
-
-row_white.append(result_white)
-row_black.append(result_black)
-
-## TIME_PER_MOVEMENT, POINTS_BALANCE, TAKEN_BALANCE
-
-white = {'taken': [], 'times': [], '_last_time': None}
-black = {'taken': [], 'times': [], '_last_time': None}
-
-board = game.board()
-
-for i, node in enumerate(game.mainline()):
-    # Parse remaining time from GameMove
-    t = datetime.strptime(node.comment[6:-1], "%H:%M:%S")
-    remaining_time = timedelta(
-        hours=t.hour, minutes=t.minute, seconds=t.second)
-
-    # TIME_PER_MOVEMENT
-    if i % 2 == 0:  # White player
-        if white['_last_time'] is not None:
-            white['times'].append(
-                (white['_last_time'] - remaining_time).total_seconds())
-        white['_last_time'] = remaining_time
-    else:  # Black player
-        if black['_last_time'] is not None:
-            black['times'].append(
-                (black['_last_time'] - remaining_time).total_seconds())
-        black['_last_time'] = remaining_time
-
-    ## TAKEN_BALANCE & POINTS_BALANCE
-    if 'x' in node.san():
-        piece_weight = PIECE_WEIGHTS[board.piece_at(
-            node.move.to_square).symbol().upper()]
-        if i % 2 == 0:  # White player takes the piece
-            white['taken'].append(1 * piece_weight)
-            black['taken'].append(-1 * piece_weight)
-        else:  # Black player takes the piece
-            black['taken'].append(1 * piece_weight)
-            white['taken'].append(-1 * piece_weight)
-    else:  # No takes in this movement
-        white['taken'].append(0)
-        black['taken'].append(0)
-
-    board.push(node.move)
-
-del white['_last_time']
-del black['_last_time']
-
-# MOVEMENTS
-
-moves_white = len(white['taken'])
-moves_black = len(black['taken'])
-
-row_white.append(moves_white)
-row_black.append(moves_black)
-
-# TOTAL_TIME_PER_PLAYER
-
-row_white.append(sum(white['times']))
-row_black.append(sum(black['times']))
-
-# TOTAL_TIME
-
-total_time = sum(white['times']) + sum(black['times'])
-
-row_white.append(total_time)
-row_black.append(total_time)
-
-## POINTS_BALANCE & TAKEN_BALANCE
-
-row_white.append(sum(white['taken']))
-row_white.append(sum([1 if t > 0 else 0 for t in white['taken']]) +
-                 sum([-1 if t < 0 else 0 for t in white['taken']]))
-
-row_black.append(sum(black['taken']))
-row_black.append(sum([1 if t > 0 else 0 for t in black['taken']]) +
-                 sum([-1 if t < 0 else 0 for t in black['taken']]))
-
-# AGGRESSIVENESS
-
-white_aggressiveness = 0
-black_aggressiveness = 0
-
-# EARLY_TAKEN
-
-moves = max(moves_white, moves_black)
-
-white_early_game = white['taken'][:int(moves*1/3)]
-black_early_game = black['taken'][:int(moves*1/3)]
-
-# CASTLING
-
-white_castling = False
-black_castling = False
-
-for i, move in enumerate(game.mainline()):
-    if move.san() == 'O-O':
-        if i % 2 == 0:  # White player
-            white_castling = True
-        else:  # Black player
-            black_castling = True
-
-if not white_castling:
-    white_aggressiveness += 2
-
-if not black_castling:
-    black_aggressiveness += 2
-
-# AGGRESSIVE_OPENING
 
 white_opening_aggressiveness = ['Sicilian Defense: Grand Prix Attack', 'Sicilian Defense: Smith-Morra Gambit', 'Trompowsky Attack', 'Trompowsky Attack: Classical Defense',
                                 'Trompowsky Attack: Borg Variation', 'Trompowsky Attack: Raptor Variation', 'Trompowsky Attack: Edge Variation', 'Danish Gambit',
@@ -192,16 +48,177 @@ black_opening_aggressiveness = ['Queen\'s Gambit Refused: Albin Countergambit', 
                                 'Sicilian Defense: Smith-Morra Gambit Declined, Scandinavian Formation', 'Sicilian Defense: Smith-Morra Gambit Deferred', 'Sicilian Defense: Staunton-Cochrane Variation', 'Sicilian Defense: Wing Gambit', 'Sicilian Defense: Wing Gambit, Carlsbad Variation',
                                 'Sicilian Defense: Wing Gambit, Marshall Variation']
 
-white_aggressive_opening = False
-black_aggressive_opening = False
+games = []
 
-if game.headers['Opening'] in white_opening_aggressiveness:
-    white_aggressive_opening = True
-    white_aggressiveness += 2
+# Load games from PGN file
+with open(GAMES_FILE) as f:
+    game = pgn.read_game(f)
 
-if game.headers['Opening'] in black_opening_aggressiveness:
-    black_aggressive_opening = True
-    black_aggressiveness += 2
+    while game:
+        row_white = []
+        row_black = []
 
-row_white.append(white_aggressiveness)
-row_black.append(black_aggressiveness)
+        # USER_ID
+        row_white.append(game.headers['White'])
+        row_black.append(game.headers['Black'])
+
+        # GAME_LINK
+        row_white.append(game.headers['Site'])
+        row_black.append(game.headers['Site'])
+
+        # ELO
+        row_white.append(game.headers['WhiteElo'])
+        row_black.append(game.headers['BlackElo'])
+
+        # COLOUR
+        row_white.append('White')
+        row_black.append('Black')
+
+        # OPENING
+        row_white.append(game.headers['Opening'])
+        row_black.append(game.headers['Opening'])
+
+        # RESULT
+
+        if "1/2" in game.headers['Result']:
+            result_white = 2
+            result_black = 2
+        elif game.headers['Result'][0] == "1":
+            result_white = 1
+            result_black = 0
+        else:
+            result_white = 0
+            result_black = 1
+
+        row_white.append(result_white)
+        row_black.append(result_black)
+
+        ## TIME_PER_MOVEMENT, POINTS_BALANCE, TAKEN_BALANCE
+
+        white = {'taken': [], 'times': [], '_last_time': None}
+        black = {'taken': [], 'times': [], '_last_time': None}
+
+        board = game.board()
+
+        for i, node in enumerate(game.mainline()):
+            # Parse remaining time from GameMove
+            t = datetime.strptime(node.comment[6:-1], "%H:%M:%S")
+            remaining_time = timedelta(
+                hours=t.hour, minutes=t.minute, seconds=t.second)
+
+            # TIME_PER_MOVEMENT
+            if i % 2 == 0:  # White player
+                if white['_last_time'] is not None:
+                    white['times'].append(
+                        (white['_last_time'] - remaining_time).total_seconds())
+                white['_last_time'] = remaining_time
+            else:  # Black player
+                if black['_last_time'] is not None:
+                    black['times'].append(
+                        (black['_last_time'] - remaining_time).total_seconds())
+                black['_last_time'] = remaining_time
+
+            ## TAKEN_BALANCE & POINTS_BALANCE
+            if 'x' in node.san():
+                piece_weight = PIECE_WEIGHTS[board.piece_at(
+                    node.move.to_square).symbol().upper()]
+                if i % 2 == 0:  # White player takes the piece
+                    white['taken'].append(1 * piece_weight)
+                    black['taken'].append(-1 * piece_weight)
+                else:  # Black player takes the piece
+                    black['taken'].append(1 * piece_weight)
+                    white['taken'].append(-1 * piece_weight)
+            else:  # No takes in this movement
+                white['taken'].append(0)
+                black['taken'].append(0)
+
+            board.push(node.move)
+
+        del white['_last_time']
+        del black['_last_time']
+
+        # MOVEMENTS
+
+        moves_white = len(white['taken'])
+        moves_black = len(black['taken'])
+
+        row_white.append(moves_white)
+        row_black.append(moves_black)
+
+        # TOTAL_TIME_PER_PLAYER
+
+        row_white.append(sum(white['times']))
+        row_black.append(sum(black['times']))
+
+        # TOTAL_TIME
+
+        total_time = sum(white['times']) + sum(black['times'])
+
+        row_white.append(total_time)
+        row_black.append(total_time)
+
+        ## POINTS_BALANCE & TAKEN_BALANCE
+
+        row_white.append(sum(white['taken']))
+        row_white.append(sum([1 if t > 0 else 0 for t in white['taken']]) +
+                        sum([-1 if t < 0 else 0 for t in white['taken']]))
+
+        row_black.append(sum(black['taken']))
+        row_black.append(sum([1 if t > 0 else 0 for t in black['taken']]) +
+                        sum([-1 if t < 0 else 0 for t in black['taken']]))
+
+        # AGGRESSIVENESS
+
+        white_aggressiveness = 0
+        black_aggressiveness = 0
+
+        # EARLY_TAKEN
+
+        moves = max(moves_white, moves_black)
+
+        white_early_game = white['taken'][:int(moves*1/3)]
+        black_early_game = black['taken'][:int(moves*1/3)]
+
+        # CASTLING
+
+        white_castling = False
+        black_castling = False
+
+        for i, move in enumerate(game.mainline()):
+            if move.san() == 'O-O':
+                if i % 2 == 0:  # White player
+                    white_castling = True
+                else:  # Black player
+                    black_castling = True
+
+        if not white_castling:
+            white_aggressiveness += 2
+
+        if not black_castling:
+            black_aggressiveness += 2
+
+        # AGGRESSIVE_OPENING
+
+        white_aggressive_opening = False
+        black_aggressive_opening = False
+
+        if game.headers['Opening'] in white_opening_aggressiveness:
+            white_aggressive_opening = True
+            white_aggressiveness += 2
+
+        if game.headers['Opening'] in black_opening_aggressiveness:
+            black_aggressive_opening = True
+            black_aggressiveness += 2
+
+        row_white.append(white_aggressiveness)
+        row_black.append(black_aggressiveness)
+
+        games.append(row_white)
+        games.append(row_black)
+
+        # Read next game. Iterate again
+        game = pgn.read_game(f)
+
+# Save target data into csv
+df = pd.DataFrame(games, columns=COLUMNS)
+df.to_csv(path_or_buf=TARGET_DATA_FILE)
