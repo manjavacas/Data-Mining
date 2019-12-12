@@ -18,6 +18,9 @@ PIECE_WEIGHTS = {
     'Q': 9
 }
 
+early_agressiveness = lambda early_taken_count: 0 if early_taken_count < 3 else (0.5 if early_taken_count < 6 else 1)
+
+
 white_opening_aggressiveness = ['Sicilian Defense: Grand Prix Attack', 'Sicilian Defense: Smith-Morra Gambit', 'Trompowsky Attack', 'Trompowsky Attack: Classical Defense',
                                 'Trompowsky Attack: Borg Variation', 'Trompowsky Attack: Raptor Variation', 'Trompowsky Attack: Edge Variation', 'Danish Gambit',
                                 'Sicilian Defense: Alapin Variation', 'Sicilian Defense: Alapin Variation, Smith-Morra Declined', 'King\'s Gambit', 'Petrov\'s Defense',
@@ -51,10 +54,16 @@ black_opening_aggressiveness = ['Queen\'s Gambit Refused: Albin Countergambit', 
 games = []
 
 # Load games from PGN file
-with open(GAMES_FILE) as f:
+with open(GAMES_FILE, encoding="utf-8-sig") as f:
     game = pgn.read_game(f)
-
+    
+    game_index = 0
     while game:
+        if game_index >= 500:
+            break
+        game_index += 1
+        print(f"{game_index} {game.headers['Site']}", end='\r', flush=True)
+
         row_white = []
         row_black = []
 
@@ -120,8 +129,12 @@ with open(GAMES_FILE) as f:
 
             ## TAKEN_BALANCE & POINTS_BALANCE
             if 'x' in node.san():
-                piece_weight = PIECE_WEIGHTS[board.piece_at(
-                    node.move.to_square).symbol().upper()]
+                taken_piece = board.piece_at(node.move.to_square)
+                if taken_piece is None: # Take "on passant" (the Pawn is not in the dst square)
+                    piece_weight = PIECE_WEIGHTS['P']
+                else:
+                    piece_weight = PIECE_WEIGHTS[taken_piece.symbol().upper()]
+                
                 if i % 2 == 0:  # White player takes the piece
                     white['taken'].append(1 * piece_weight)
                     black['taken'].append(-1 * piece_weight)
@@ -176,8 +189,12 @@ with open(GAMES_FILE) as f:
 
         moves = max(moves_white, moves_black)
 
-        white_early_game = white['taken'][:int(moves*1/3)]
-        black_early_game = black['taken'][:int(moves*1/3)]
+        white_early_taken = sum([1 for white_taken in white['taken'][:int(moves/3)] if white_taken > 0])
+        black_early_taken = sum([1 for black_taken in black['taken'][:int(moves/3)] if black_taken > 0])
+
+        white_aggressiveness += early_agressiveness(white_early_taken)
+        black_aggressiveness += early_agressiveness(black_early_taken)
+
 
         # CASTLING
 
