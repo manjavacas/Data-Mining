@@ -10,7 +10,35 @@ from datetime import timedelta
 GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
 TARGET_DATA_FILE = os.path.join('..', 'data', 'target_data.csv')
 
-COLUMNS = ['user_id', 'game_link', 'elo', 'colour', 'opening', 'result', 'movements', 'total_time_player', 'total_time', 'points_balance', 'taken_balance', 'aggressiveness']
+COLUMNS = [
+    'user_id',
+    'game_link',
+    'elo',
+    'colour',
+    'opening',
+    'result',
+    'movements',
+    'total_time_player',
+    'total_time',
+    'early_times_mean',
+    'early_times_median',
+    'early_times_variance',
+    'early_times_max',
+    'early_times_min',
+    'mid_times_mean',
+    'mid_times_median',
+    'mid_times_variance',
+    'mid_times_max',
+    'mid_times_min',
+    'end_times_mean',
+    'end_times_median',
+    'end_times_variance',
+    'end_times_max',
+    'end_times_min',
+    'points_balance',
+    'taken_balance',
+    'aggressiveness'
+]
 
 PIECE_WEIGHTS = {
     'P': 1,
@@ -21,6 +49,26 @@ PIECE_WEIGHTS = {
 }
 
 early_agressiveness = lambda early_taken_count: 0 if early_taken_count < 3 else (0.5 if early_taken_count < 6 else 1)
+
+def time_metrics(times):
+    '''
+        Mean, median, variance, maximum, minimum
+    '''
+    return mean(times), median(times), var(times), max(times, default=None), min(times, default=None)
+
+def partition_times(times, moves_count):
+    '''
+        Movement count / 2 => movements per player
+        Movements per player / 3 => Movements per game stage
+        
+        Note: First movement time is omitted due to Lichess.org time format
+    '''
+    early_times = times[:int(moves_count/6)-1]
+    mid_times = times[int(moves_count/6)-1:int(moves_count/3)]
+    end_times = times[int(moves_count/3):]
+
+    return early_times, mid_times, end_times
+
 
 white_opening_aggressiveness = ['Sicilian Defense: Grand Prix Attack', 'Sicilian Defense: Smith-Morra Gambit', 'Trompowsky Attack', 'Trompowsky Attack: Classical Defense',
                                 'Trompowsky Attack: Borg Variation', 'Trompowsky Attack: Raptor Variation', 'Trompowsky Attack: Edge Variation', 'Danish Gambit',
@@ -152,13 +200,12 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         del white['_last_time']
         del black['_last_time']
 
-        # MOVEMENTS
+        # NUMBER_OF_MOVEMENTS
+        assert len(white['taken']) == len(black['taken'])
+        moves_count = len(white['taken'])
 
-        moves_white = len(white['taken'])
-        moves_black = len(black['taken'])
-
-        row_white.append(moves_white)
-        row_black.append(moves_black)
+        row_white.append(moves_count)
+        row_black.append(moves_count)
 
         # TOTAL_TIME_PER_PLAYER
 
@@ -172,14 +219,34 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         row_white.append(total_time)
         row_black.append(total_time)
 
+        # Partition movement times in early/mid/end
+        w_early, w_mid, w_end = partition_times(white['times'], moves_count)
+        b_early, b_mid, b_end = partition_times(black['times'], moves_count)
+
+        
+        if(any(len(t) == 0 for t in [w_early, w_mid, w_end, b_early, b_mid, b_end])):
+            print(game.headers['Site'])
+            print(w_early, w_mid, w_end)
+            print(b_early, b_mid, b_end)
+
+        # Add time metrics (mean, median, var, max, min) to player rows
+        row_white.extend(time_metrics(w_early))
+        row_white.extend(time_metrics(w_mid))
+        row_white.extend(time_metrics(w_end))
+
+        row_black.extend(time_metrics(b_early))
+        row_black.extend(time_metrics(b_mid))
+        row_black.extend(time_metrics(b_end))
+
+
         # White times partition
 
         ##########################################################################
-        print(white['times'], int(moves_white/6)-1)
-        print(white['times'][:int(moves_white/6)-1], white['times'][int(moves_white/6)-1:int(moves_white/3)], white['times'][int(moves_white/3):])
+        #print(white['times'], int(moves_white/6)-1)
+        #print(white['times'][:int(moves_white/6)-1], white['times'][int(moves_white/6)-1:int(moves_white/3)], white['times'][int(moves_white/3):])
         ##########################################################################
 
-        white_times_early_game = white['times'][:int(moves_white/6)-1]
+        '''white_times_early_game = white['times'][:int(moves_white/6)-1]
         white_times_mid_game = white['times'][int(moves_white/6)-1:int(moves_white/3)]
         white_times_end_game = white['times'][int(moves_white/3):]
 
@@ -192,22 +259,22 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         mean_white_time_per_movement_early = mean(white_times_early_game)
         median_white_time_per_movement_early = median(white_times_early_game)
         var_white_time_per_movement_early = var(white_times_early_game)
-        max_white_time_per_movement_early = max(white_times_early_game)
-        min_white_time_per_movement_early = min(white_times_early_game)
+        max_white_time_per_movement_early = max(white_times_early_game, default=None)
+        min_white_time_per_movement_early = min(white_times_early_game, default=None)
 
         # Data of white times per movement mid
         mean_white_time_per_movement_mid = mean(white_times_mid_game)
         median_white_time_per_movement_mid = median(white_times_mid_game)
         var_white_time_per_movement_mid = var(white_times_mid_game)
-        max_white_time_per_movement_mid = max(white_times_mid_game)
-        min_white_time_per_movement_mid = min(white_times_mid_game)
+        max_white_time_per_movement_mid = max(white_times_mid_game, default=None)
+        min_white_time_per_movement_mid = min(white_times_mid_game, default=None)
 
         # Data of white times per movement end
         mean_white_time_per_movement_end = mean(white_times_end_game)
         median_white_time_per_movement_end = median(white_times_end_game)
         var_white_time_per_movement_end = var(white_times_end_game)
-        max_white_time_per_movement_end = max(white_times_end_game)
-        min_white_time_per_movement_end = min(white_times_end_game)
+        max_white_time_per_movement_end = max(white_times_end_game, default=None)
+        min_white_time_per_movement_end = min(white_times_end_game, default=None)
 
         # Data of black times per movement early
         mean_black_time_per_movement_early = mean(black_times_early_game)
@@ -228,7 +295,7 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         median_black_time_per_movement_end = median(black_times_end_game)
         var_black_time_per_movement_end = var(black_times_end_game)
         max_black_time_per_movement_end = max(black_times_end_game)
-        min_black_time_per_movement_end = min(black_times_end_game)
+        min_black_time_per_movement_end = min(black_times_end_game)'''
 
         ## POINTS_BALANCE & TAKEN_BALANCE
 
@@ -247,10 +314,8 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
 
         # EARLY_TAKEN
 
-        moves = max(moves_white, moves_black)
-
-        white_early_taken = sum([1 for white_taken in white['taken'][:int(moves/3)] if white_taken > 0])
-        black_early_taken = sum([1 for black_taken in black['taken'][:int(moves/3)] if black_taken > 0])
+        white_early_taken = sum([1 for white_taken in white['taken'][:int(moves_count/3)] if white_taken > 0])
+        black_early_taken = sum([1 for black_taken in black['taken'][:int(moves_count/3)] if black_taken > 0])
 
         white_aggressiveness += early_agressiveness(white_early_taken)
         black_aggressiveness += early_agressiveness(black_early_taken)
