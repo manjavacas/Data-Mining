@@ -107,6 +107,7 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
 
         white = {'taken': [], 'times': [], '_last_time': None}
         black = {'taken': [], 'times': [], '_last_time': None}
+        time_increase = int(game.headers['TimeControl'].split('+')[-1])
 
         board = game.board()
 
@@ -120,12 +121,12 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
             if i % 2 == 0:  # White player
                 if white['_last_time'] is not None:
                     white['times'].append(
-                        (white['_last_time'] - remaining_time).total_seconds())
+                        (white['_last_time'] - remaining_time).total_seconds() + time_increase)
                 white['_last_time'] = remaining_time
             else:  # Black player
                 if black['_last_time'] is not None:
                     black['times'].append(
-                        (black['_last_time'] - remaining_time).total_seconds())
+                        (black['_last_time'] - remaining_time).total_seconds() + time_increase)
                 black['_last_time'] = remaining_time
 
             ## TAKEN_BALANCE & POINTS_BALANCE
