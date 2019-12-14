@@ -108,10 +108,8 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
     
     game_index = 0
     while game:
-        if game_index >= 500:
-            break
         game_index += 1
-        print(f"{game_index} {game.headers['Site']}", end='\r', flush=True)
+        print(f"\r{game_index} {game.headers['Site']}", end='', flush=True)
 
         row_white = []
         row_black = []
@@ -225,11 +223,11 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
 
         
         if(any(len(t) == 0 for t in [w_early, w_mid, w_end, b_early, b_mid, b_end])):
-            print(game.headers['Site'])
+            print()
             print(w_early, w_mid, w_end)
             print(b_early, b_mid, b_end)
 
-        # Add time metrics (mean, median, var, max, min) to player rows
+        # TIME_METRICS (mean, median, var, max, min) to player rows
         row_white.extend(time_metrics(w_early))
         row_white.extend(time_metrics(w_mid))
         row_white.extend(time_metrics(w_end))
@@ -238,64 +236,6 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         row_black.extend(time_metrics(b_mid))
         row_black.extend(time_metrics(b_end))
 
-
-        # White times partition
-
-        ##########################################################################
-        #print(white['times'], int(moves_white/6)-1)
-        #print(white['times'][:int(moves_white/6)-1], white['times'][int(moves_white/6)-1:int(moves_white/3)], white['times'][int(moves_white/3):])
-        ##########################################################################
-
-        '''white_times_early_game = white['times'][:int(moves_white/6)-1]
-        white_times_mid_game = white['times'][int(moves_white/6)-1:int(moves_white/3)]
-        white_times_end_game = white['times'][int(moves_white/3):]
-
-        # Black times partition
-        black_times_early_game = black['times'][:int(moves_black/6)-1]
-        black_times_mid_game = black['times'][int(moves_black/6)-1:int(moves_black/3)]
-        black_times_end_game = black['times'][int(moves_black/3):]
-
-        # Data of white times per movement early
-        mean_white_time_per_movement_early = mean(white_times_early_game)
-        median_white_time_per_movement_early = median(white_times_early_game)
-        var_white_time_per_movement_early = var(white_times_early_game)
-        max_white_time_per_movement_early = max(white_times_early_game, default=None)
-        min_white_time_per_movement_early = min(white_times_early_game, default=None)
-
-        # Data of white times per movement mid
-        mean_white_time_per_movement_mid = mean(white_times_mid_game)
-        median_white_time_per_movement_mid = median(white_times_mid_game)
-        var_white_time_per_movement_mid = var(white_times_mid_game)
-        max_white_time_per_movement_mid = max(white_times_mid_game, default=None)
-        min_white_time_per_movement_mid = min(white_times_mid_game, default=None)
-
-        # Data of white times per movement end
-        mean_white_time_per_movement_end = mean(white_times_end_game)
-        median_white_time_per_movement_end = median(white_times_end_game)
-        var_white_time_per_movement_end = var(white_times_end_game)
-        max_white_time_per_movement_end = max(white_times_end_game, default=None)
-        min_white_time_per_movement_end = min(white_times_end_game, default=None)
-
-        # Data of black times per movement early
-        mean_black_time_per_movement_early = mean(black_times_early_game)
-        median_black_time_per_movement_early = median(black_times_early_game)
-        var_black_time_per_movement_early = var(black_times_early_game)
-        max_black_time_per_movement_early = max(black_times_early_game)
-        min_black_time_per_movement_early = min(black_times_early_game)
-
-        # Data of black times per movement mid
-        mean_black_time_per_movement_mid = mean(black_times_mid_game)
-        median_black_time_per_movement_mid = median(black_times_mid_game)
-        var_black_time_per_movement_mid = var(black_times_mid_game)
-        max_black_time_per_movement_mid = max(black_times_mid_game)
-        min_black_time_per_movement_mid = min(black_times_mid_game)
-
-        # Data of black times per movement end
-        mean_black_time_per_movement_end = mean(black_times_end_game)
-        median_black_time_per_movement_end = median(black_times_end_game)
-        var_black_time_per_movement_end = var(black_times_end_game)
-        max_black_time_per_movement_end = max(black_times_end_game)
-        min_black_time_per_movement_end = min(black_times_end_game)'''
 
         ## POINTS_BALANCE & TAKEN_BALANCE
 
