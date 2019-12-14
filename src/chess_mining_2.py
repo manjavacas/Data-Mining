@@ -123,8 +123,24 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         row_black.append(game.headers['Site'])
 
         # ELO
-        row_white.append(game.headers['WhiteElo'])
-        row_black.append(game.headers['BlackElo'])
+        try:
+            white_elo = int(game.headers['WhiteElo'])
+        except ValueError:
+            white_elo = None
+
+        try:
+            black_elo = int(game.headers['BlackElo'])
+        except ValueError:
+            black_elo = None
+        
+        # Si el ELO es '?' (es la IA), rellenamos con el ELO del oponente (porque Lichess genera partidas de ELO similar)
+        if white_elo is None:
+            white_elo = black_elo
+        if black_elo is None:
+            black_elo = white_elo
+        
+        row_white.append(white_elo)
+        row_black.append(black_elo)
 
         # COLOUR
         row_white.append('White')
