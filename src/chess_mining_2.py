@@ -153,14 +153,14 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
         # RESULT
 
         if "1/2" in game.headers['Result']:
-            result_white = 2
-            result_black = 2
-        elif game.headers['Result'][0] == "1":
             result_white = 1
+            result_black = 1
+        elif game.headers['Result'][0] == "1":
+            result_white = 2
             result_black = 0
         else:
             result_white = 0
-            result_black = 1
+            result_black = 2
 
         row_white.append(result_white)
         row_black.append(result_black)
@@ -175,7 +175,11 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
 
         for i, node in enumerate(game.mainline()):
             # Parse remaining time from GameMove
-            t = datetime.strptime(node.comment[6:-1], "%H:%M:%S")
+            try:
+                t = datetime.strptime(node.comment[6:-1], "%H:%M:%S")
+            except ValueError:
+                t = datetime.strptime('0:0:0', "%H:%M:%S")
+                
             remaining_time = timedelta(
                 hours=t.hour, minutes=t.minute, seconds=t.second)
 
