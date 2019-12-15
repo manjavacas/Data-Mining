@@ -7,8 +7,11 @@ from numpy import mean, median, var
 from datetime import datetime
 from datetime import timedelta
 
-GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
-TARGET_DATA_FILE = os.path.join('..', 'data', 'target_data.csv')
+# GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
+# TARGET_DATA_FILE = os.path.join('..', 'data', 'target_data.csv')
+
+GAMES_FILE = os.path.join('..', 'data', 'test', 'games_october.pgn')
+TARGET_DATA_FILE = os.path.join('..', 'data', 'test', 'target_data_test.csv')
 
 COLUMNS = [
     'user_id',
@@ -322,4 +325,37 @@ with open(GAMES_FILE, encoding="utf-8-sig") as f:
 
 # Save target data into csv
 df = pd.DataFrame(games, columns=COLUMNS)
+
+# Borra nulls en las particiones de los tiempos (partidas muy cortas)
+df = df.dropna()
+
+NON_NEGATIVE_COLUMNS = [
+    'total_time_player',
+    'total_time',
+    'early_times_mean',
+    'early_times_median',
+    'early_times_variance',
+    'early_times_max',
+    'early_times_min',
+    'mid_times_mean',
+    'mid_times_median',
+    'mid_times_variance',
+    'mid_times_max',
+    'mid_times_min',
+    'end_times_mean',
+    'end_times_median',
+    'end_times_variance',
+    'end_times_max',
+    'end_times_min'
+]
+
+# Borra los tiempos negativos (un jugador le ha dado tiempo al otro)
+df.drop(df[df[df[NON_NEGATIVE_COLUMNS] < 0].any(axis=1)].index, inplace=True)
+
+# Encode categorical variables: colour and opening
+df['colour'] = df['colour'].astype('category')
+df['colour_enc'] = df['colour'].cat.codes
+df['opening'] = df['opening'].astype('category')
+df['opening_enc'] = df['opening'].cat.codes
+
 df.to_csv(path_or_buf=TARGET_DATA_FILE)
