@@ -7,11 +7,11 @@ from numpy import mean, median, var
 from datetime import datetime
 from datetime import timedelta
 
-GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
-TARGET_DATA_FILE = os.path.join('..', 'data', 'games_target_data.csv')
+#GAMES_FILE = os.path.join('..', 'data', 'top200_sept2019', 'games0-199.pgn')
+#TARGET_DATA_FILE = os.path.join('..', 'data', 'games_target_data.csv')
 
-#GAMES_FILE = os.path.join('..', 'data', 'test', 'games_october.pgn')
-#TARGET_DATA_FILE = os.path.join('..', 'data', 'test', 'target_data_test.csv')
+GAMES_FILE = os.path.join('..', 'data', 'test', 'games_october.pgn')
+TARGET_DATA_FILE = os.path.join('..', 'data', 'test', 'games_target_data_test.csv')
 
 COLUMNS = [
     'white_user_id',
